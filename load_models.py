@@ -49,7 +49,7 @@ def load_quantized_model_gguf_ggml(model_id, model_basename, device_type, loggin
             "n_batch": N_BATCH,  # set this based on your GPU & CPU RAM
         }
         if device_type.lower() == "mps":
-            kwargs["n_gpu_layers"] = 1
+            kwargs["n_gpu_layers"] = 1000
         if device_type.lower() == "cuda":
             kwargs["n_gpu_layers"] = N_GPU_LAYERS  # set this based on your GPU
 
