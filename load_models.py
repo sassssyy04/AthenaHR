@@ -11,6 +11,7 @@ from transformers import (
 )
 from constants import CONTEXT_WINDOW_SIZE, MAX_NEW_TOKENS, N_GPU_LAYERS, N_BATCH, MODELS_PATH
 
+#test for branch merging
 
 def load_quantized_model_gguf_ggml(model_id, model_basename, device_type, logging):
     """
