@@ -71,6 +71,7 @@ def load_model(device_type, model_id, model_basename, LOGGING=logging):
 
     # Load configuration from the model to avoid warnings
     generation_config = GenerationConfig.from_pretrained(model_id)
+    #https://huggingface.co/docs/transformers/main/main_classes/text_generation
     # see here for details:
     # https://huggingface.co/docs/transformers/
     # main_classes/text_generation#transformers.GenerationConfig.from_pretrained.returns
