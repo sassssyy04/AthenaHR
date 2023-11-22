@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -149,22 +148,19 @@
 <h1>Chatbot UI</h1>
 </head>
 <body>
-    <div>
-        <a href="{{ url_for('faq') }}" target="_blank" >Go to FAQ</a>
-    </div>
    <!-- <div class="menu">
             <div class="menu-item" onclick="selectDomain('domain1')">Internal data</div>
             <div class="menu-item" onclick="selectDomain('placeholder')">Policies</div>
              Add more menu items as needed 
     </div> -->
 
-        <div>
-        {% if query_history %}
+    <div>
+        {% if query_history1 %}
             <div class="query-history-container">
                 <p>Query History:</p>
                 <div class="query-history-scroll">
                     <ul>
-                        {% for entry in query_history %}
+                        {% for entry in query_history1 %}
                             <li>
                                 <p class="user-message">User: {{ entry['user_input'] }}</p>
                                 <p class="chatbot-message">Chatbot: {{ entry['response'] }}</p>
