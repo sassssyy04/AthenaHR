@@ -11,7 +11,7 @@ from langchain.callbacks.manager import CallbackManager
 
 callback_manager = CallbackManager([StreamingStdOutCallbackHandler()])
 
-from prompt_template_utils_2 import get_prompt_template
+from prompt_template_utils import get_prompt_template
 
 # from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.vectorstores import Chroma
@@ -122,12 +122,12 @@ def retrieval_qa_pipline(device_type, use_history, promptTemplate_type="llama"):
     # embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_NAME)
 
     # load the vectorstore
-    db = Chroma(
+    db2 = Chroma(
         persist_directory=PERSIST_DIRECTORY,
         embedding_function=embeddings,
         client_settings=CHROMA_SETTINGS
     )
-    retriever = db.as_retriever()
+    retriever = db2.as_retriever()
 
     # get the prompt template and memory if set by the user.
     prompt, memory = get_prompt_template(promptTemplate_type=promptTemplate_type, history=use_history)
@@ -215,7 +215,7 @@ def retrieval_qa_pipline(device_type, use_history, promptTemplate_type="llama"):
     help="whether to save Q&A pairs to a CSV file (Default is False)",
 )
 
-def main(device_type, show_sources, use_history, model_type, save_qa):
+def main(device_type, show_sources, use_history, model_type, save_qa,query_history_empty = True):
     """
     Implements the main information retrieval task for a localGPT.
 
@@ -259,6 +259,13 @@ def main(device_type, show_sources, use_history, model_type, save_qa):
         print(query)
         print("\n> Answer:")
         print(answer)
+        query_history = []
+        query_history.append({'user_input': query, 'response': answer}) 
+        query_history_empty = True
+
+        # Check if there is more than one entry in query history for user input
+        if len([entry for entry in query_history if entry['user_input'] == query]) > 1:
+            query_history_empty = False
 
         if show_sources:  # this is a flag that you can set to disable showing answers.
             # # Print the relevant sources used for the answer
