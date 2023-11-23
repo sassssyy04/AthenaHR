@@ -6,11 +6,14 @@ from constants import MODELS_PATH
 
 import os
 print("Current Working Directory:", os.getcwd())
+MODELS_PATH = "models"
+
+
+if not os.path.exists(MODELS_PATH):
+    os.mkdir(MODELS_PATH)
 
 app = Flask(__name__)
 
-# Initialize the RetrievalQA instance
-qa_instance = None
 
 # Initialize an empty list to store query history
 query_history = []
@@ -24,28 +27,27 @@ def index():
 # Endpoint to handle form submission
 @app.route('/submit', methods=['POST'])
 def submit():
-    if not os.path.exists(MODELS_PATH):
-        os.mkdir(MODELS_PATH)
+    global qa_instance
+    use_history = True
+    
 
-    # Ensure the global qa_instance is initialized
-   # global qa_instance
-  #  if qa_instance is None:
-    qa_instance = retrieval_qa_pipline(device_type="mps", use_history=True, promptTemplate_type="llama")
-    while True:
-        user_input = request.form['user_input']
-    # Get the answer from the QA instance
+    user_input = request.form.get('user_input', '')
+
+    greetings = ["hi", "hello", "hey", "greetings", "morning", "afternoon", "evening"]
+    if any(greeting == user_input.lower() for greeting in greetings):
+        response = "Hello! I am AthenaGuard, I am here to assist you with issues related to financial scams. How may I help you today?"
+        query_history.append({'user_input': user_input, 'response': response})
+        
+    else:
+        qa_instance = retrieval_qa_pipline(device_type="mps", use_history = True ,promptTemplate_type="llama")
+      
         res = qa_instance(user_input)
         answer, docs = res["result"], res["source_documents"]
-        query_history.append({'user_input': user_input, 'response': answer}) 
-        query_history_empty = True
+        query_history.append({'user_input': user_input, 'response': answer})
+        response = answer
 
-        # Check if there is more than one entry in query history for user input
-        if len([entry for entry in query_history if entry['user_input'] == user_input]) > 1:
-            query_history_empty = False
-        #if save_qa:
-        #    utils.log_to_csv(query, answer)
-    # Pass user input and response to the template
-        return render_template('index.html', user_input=user_input, response=answer, query_history=query_history)
+    print(response)  # Print the response to the Flask console for debugging purposes
+    return render_template('index.html', user_input=user_input, response=response, query_history=query_history)
 
 @app.route('/faq')
 def faq():
@@ -54,8 +56,7 @@ def faq():
 
 @app.route('/submit_faq', methods=['POST'])
 def submit_faq():
-    if not os.path.exists(MODELS_PATH):
-        os.mkdir(MODELS_PATH)
+
 
     user_input1 = request.form['user_input']
 
@@ -63,7 +64,7 @@ def submit_faq():
     #global qa_instance
     #if qa_instance is None:
         #qa_instance = retrieval_qa_pipline(device_type="mps", use_history=True, promptTemplate_type="llamaFAQ")
-    qa_instance = retrieval_qa_pipline(device_type="mps", use_history=True, promptTemplate_type="llamaFAQ")
+    qa_instance = retrieval_qa_pipline(device_type="mps", use_history = True, promptTemplate_type="llamaFAQ")
     while True:
         user_input1 = request.form['user_input']
     # Get the answer from the QA instance
@@ -74,16 +75,6 @@ def submit_faq():
         #if save_qa:
         #    utils.log_to_csv(user_input1, answer1)
         return render_template('FAQ.html', user_input=user_input1, response=answer, query_history=query_history1)
-    # Get the answer from the QA instance
-    #res = qa_instance(user_input1)
-    #answer, docs = res["result"], res["source_documents"]
-    #query_history1.append({'user_input': user_input1, 'response': answer})
-    #print("Query History FAQ:", query_history1)  # Add this line for debugging
-
-   # if save_qa:
-    #    utils.log_to_csv(query, answer)
-    # Pass user input and response to the template
-    #return render_template('FAQ.html', user_input=user_input1, response=answer, query_history=query_history1)
 
 
 if __name__ == "__main__":
