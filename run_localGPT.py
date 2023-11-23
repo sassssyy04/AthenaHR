@@ -8,6 +8,8 @@ from langchain.embeddings import HuggingFaceInstructEmbeddings
 from langchain.llms import HuggingFacePipeline
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler  # for streaming response
 from langchain.callbacks.manager import CallbackManager
+from langchain.vectorstores import FAISS
+from langchain.chains import ConversationChain
 
 callback_manager = CallbackManager([StreamingStdOutCallbackHandler()])
 
@@ -36,6 +38,10 @@ from constants import (
     CHROMA_SETTINGS
 )
 
+
+def handle_greetings(query):
+    greetings = ["hi", "hello", "hey", "greetings", "morning", "afternoon", "evening"]
+    return any(greeting == query.lower() for greeting in greetings)
 
 def load_model(device_type, model_id, model_basename, LOGGING=logging):
     """
@@ -82,9 +88,10 @@ def load_model(device_type, model_id, model_basename, LOGGING=logging):
         model=model,
         tokenizer=tokenizer,
         max_length=MAX_NEW_TOKENS,
-        temperature=0.2,
-        # top_p=0.95,
-        repetition_penalty=1.15,
+        temperature=0.01,
+        top_p=0.95,
+        top_k=40,
+        repetition_penalty=1.03,
         generation_config=generation_config,
     )
 
@@ -127,35 +134,30 @@ def retrieval_qa_pipline(device_type, use_history, promptTemplate_type="llama"):
         embedding_function=embeddings,
         client_settings=CHROMA_SETTINGS
     )
+
+    new_db = FAISS.load_local("faiss_index", embeddings)
     retriever = db2.as_retriever()
+    FAISS_retriever = new_db.as_retriever(search_type="similarity_score_threshold", search_kwargs={"score_threshold": .5})
+
+
 
     # get the prompt template and memory if set by the user.
     prompt, memory = get_prompt_template(promptTemplate_type=promptTemplate_type, history=use_history)
 
+    print("Memory Content:", memory)
+
     # load the llm pipeline
     llm = load_model(device_type, model_id=MODEL_ID, model_basename=MODEL_BASENAME, LOGGING=logging)
 
-    if use_history:
-        qa = RetrievalQA.from_chain_type(
-            llm=llm,
-            chain_type="stuff",  # try other chains types as well. refine, map_reduce, map_rerank
-            retriever=retriever,
-            return_source_documents=True,  # verbose=True,
-            callbacks=callback_manager,
-            chain_type_kwargs={"prompt": prompt, "memory": memory},
-        )
-    else:
-        qa = RetrievalQA.from_chain_type(
-            llm=llm,
-            chain_type="stuff",  # try other chains types as well. refine, map_reduce, map_rerank
-            retriever=retriever,
-            return_source_documents=True,  # verbose=True,
-            callbacks=callback_manager,
-            chain_type_kwargs={
-                "prompt": prompt,
-            },
-        )
-
+    qa = RetrievalQA.from_chain_type(
+        llm=llm,
+        chain_type="stuff",  # try other chains types as well. refine, map_reduce, map_rerank
+        retriever=FAISS_retriever,
+        return_source_documents=True,  # verbose=True,
+        callbacks=callback_manager,
+       chain_type_kwargs={"prompt": prompt, "memory": memory},
+       )
+    
     return qa
 
 
@@ -245,13 +247,26 @@ def main(device_type, show_sources, use_history, model_type, save_qa,query_histo
         os.mkdir(MODELS_PATH)
 
     qa = retrieval_qa_pipline(device_type, use_history, promptTemplate_type=model_type)
+    
     # Interactive questions and answers
     while True:
         query = input("\nEnter a query: ")
         if query == "exit":
             break
+
+        if handle_greetings(query):
+            print("Hello! I am AthenaGuard, I am here to assist you with issues related to financial scams. How may I help you today?")
+            continue
         # Get the answer from the chain
-        res = qa(query)
+        chat_history = []
+        if chat_history:
+
+            res = qa({"question": query, "chat_history": chat_history}) 
+        else:
+            # If chat history is empty, initialize it and make the first query
+            res = qa(query)
+
+        # Extract the result
         answer, docs = res["result"], res["source_documents"]
 
         # Print the result
@@ -259,13 +274,8 @@ def main(device_type, show_sources, use_history, model_type, save_qa,query_histo
         print(query)
         print("\n> Answer:")
         print(answer)
-        query_history = []
-        query_history.append({'user_input': query, 'response': answer}) 
-        query_history_empty = True
 
-        # Check if there is more than one entry in query history for user input
-        if len([entry for entry in query_history if entry['user_input'] == query]) > 1:
-            query_history_empty = False
+
 
         if show_sources:  # this is a flag that you can set to disable showing answers.
             # # Print the relevant sources used for the answer
