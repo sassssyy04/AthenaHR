@@ -10,6 +10,8 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler 
 from langchain.callbacks.manager import CallbackManager
 from langchain.vectorstores import FAISS
 from langchain.chains import ConversationChain
+from langchain.retrievers import BM25Retriever,EnsembleRetriever
+from ingest import load_documents
 
 callback_manager = CallbackManager([StreamingStdOutCallbackHandler()])
 
@@ -35,7 +37,8 @@ from constants import (
     MODEL_BASENAME,
     MAX_NEW_TOKENS,
     MODELS_PATH,
-    CHROMA_SETTINGS
+    CHROMA_SETTINGS,
+    SOURCE_DIRECTORY
 )
 
 
@@ -134,17 +137,20 @@ def retrieval_qa_pipline(device_type, use_history, promptTemplate_type="llama"):
         embedding_function=embeddings,
         client_settings=CHROMA_SETTINGS
     )
+    documents = load_documents(SOURCE_DIRECTORY)
+    texts = [doc.page_content for doc in documents]
 
     new_db = FAISS.load_local("faiss_index", embeddings)
     retriever = db2.as_retriever()
     FAISS_retriever = new_db.as_retriever(search_type="similarity_score_threshold", search_kwargs={"score_threshold": .5})
-
-
+    bm25_retriever = BM25Retriever.from_texts(texts)
+    bm25_retriever.k = 2
+    ensemble_retriever = EnsembleRetriever(retrievers=[bm25_retriever, FAISS_retriever],
+                                       weights=[0.5, 0.5])
 
     # get the prompt template and memory if set by the user.
     prompt, memory = get_prompt_template(promptTemplate_type=promptTemplate_type, history=use_history)
 
-    print("Memory Content:", memory)
 
     # load the llm pipeline
     llm = load_model(device_type, model_id=MODEL_ID, model_basename=MODEL_BASENAME, LOGGING=logging)
@@ -152,7 +158,7 @@ def retrieval_qa_pipline(device_type, use_history, promptTemplate_type="llama"):
     qa = RetrievalQA.from_chain_type(
         llm=llm,
         chain_type="stuff",  # try other chains types as well. refine, map_reduce, map_rerank
-        retriever=FAISS_retriever,
+        retriever=ensemble_retriever,
         return_source_documents=True,  # verbose=True,
         callbacks=callback_manager,
        chain_type_kwargs={"prompt": prompt, "memory": memory},
@@ -255,19 +261,23 @@ def main(device_type, show_sources, use_history, model_type, save_qa,query_histo
             break
 
         if handle_greetings(query):
-            print("Hello! I am AthenaGuard, I am here to assist you with issues related to financial scams. How may I help you today?")
+            print("Hello! I am AthenaHR, here to assist you with any queries you may have related to Human resources within the company.")
             continue
         # Get the answer from the chain
         chat_history = []
+        chat_history_text = []
+
         if chat_history:
 
-            res = qa({"question": query, "chat_history": chat_history}) 
+            res = qa({"question": query, "chat_history": chat_history_text}) 
         else:
             # If chat history is empty, initialize it and make the first query
             res = qa(query)
 
         # Extract the result
         answer, docs = res["result"], res["source_documents"]
+        chat_history.append({"question": query, "answer": answer})
+        chat_history_text = chat_history[-4:]
 
         # Print the result
         print("\n\n> Question:")

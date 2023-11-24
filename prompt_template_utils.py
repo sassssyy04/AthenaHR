@@ -6,13 +6,20 @@ This seems to have significant impact on the output of the LLM.
 
 from langchain.memory import ConversationBufferMemory
 from langchain.prompts import PromptTemplate
+from smart_default import get_system_prompt
 
-# this is specific to Llama-2.
+from datetime import datetime
 
-system_prompt = """You are athenaGuard, a Q&A chat assistant. Your purpose is to promptly assist and address individuals affected by financial scams, enhancing their experience by providing immediate guidance, resources, and solutions to mitigate the impact of scam-related issues. Offer concise and accurate responses. If you can not answer a user question based on 
-the provided context, inform the user. Do not present a information to the user if you don't think it is relevant. Ask for clarity to confirm the relevance of the context. Do not use any other information for answering user."""
+# Get today's date in the format you want
+today_date = datetime.now().strftime("%B %d, %Y")
 
-def get_prompt_template(system_prompt=system_prompt, promptTemplate_type=None, history=True):
+
+# Include today's date in the system prompt
+
+
+def get_prompt_template(promptTemplate_type=None, history=True):
+    system_prompt = get_system_prompt()
+    print(system_prompt)
     if promptTemplate_type == "llama":
         B_INST, E_INST = "[INST]", "[/INST]"
         B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
