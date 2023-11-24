@@ -25,7 +25,7 @@ Environment Setup 📥
 📥 Clone the AthenaHR repo using git:
 
 CLONE : 
-git clone https://github.com/sassssyy04/localGPT
+git clone https://github.com/sassssyy04/AthenaHR
 🐍 Install conda for virtual environment management. Create and activate a new virtual environment.
 
 CREATE ENV : 
