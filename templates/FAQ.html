@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot UI</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            /* display: flex; */
+            flex-direction: row;
+            align-items: center; /* Center vertically */
+            justify-content: center; /* Center horizontally */
+            height: 100vh;
+            
+        }
+
+        .query-history-container {
+            max-height: 500px; /* Set the maximum height for the container */
+            overflow-y: auto; /* Enable vertical scrolling */
+            background-color: #333; /* Dark grey background color */
+            padding: 10px; /* Add padding for better visual appearance */
+        }
+
+        .query-history-scroll {
+            overflow-y: auto; /* Enable vertical scrolling within the container */
+        }
+        .e3_22 { 
+            background-color: #ffffff;
+            width: 525px;
+            height: 63px;
+            position: absolute;
+            left: 520px;
+            top: 710px;
+            border-top-left-radius: 30px;
+            border-top-right-radius: 30px;
+            border-bottom-left-radius: 30px;
+            border-bottom-right-radius: 30px;
+            text-align: center; /* Center the text horizontally */
+            display: flex;
+            align-items: center; /* Center the text vertically */
+        }
+        .e3_23 { 
+            background-color:rgba(43.1715240329504, 119.58303362131119, 209.2834523320198, 1);
+            width:325px;
+            height:63px;
+            position:absolute;
+            left:620px;
+            top:800px;
+            border-top-left-radius:30px;
+            border-top-right-radius:30px;
+            border-bottom-left-radius:30px;
+            border-bottom-right-radius:30px;
+        }
+
+        .container {
+            display: flex;
+        }
+
+        .menu {
+            background-color: #333;
+            color: #fff;
+            padding: 0px;
+            display: block !important;
+            justify-content: flex-start;
+            flex-direction: column;
+            align-items: flex-start;
+            height: 100vh;
+            width: 150px;
+            margin: 10px;
+            position: fixed;
+        }
+
+        .menu-item {
+            margin-bottom: 16px;
+            cursor: pointer;
+            padding: 16px;
+        }
+
+        .content {
+            background-color: #7c7a7a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-left: 170px;
+            height: 100vh;
+            padding: 0px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            margin-top: 20px;
+        }
+
+        label {
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        input {
+            padding: 8px;
+            margin-bottom: 16px;
+            width: 400px;
+            background-color: #535353;
+        }
+
+        button {
+            background-color: #007bff !important;
+            color: #fff;
+            padding: 10px;
+            cursor: pointer;
+            border: none;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .chat-container {
+            margin-top: 20px;
+            max-width: 400px;
+            padding: 20px;
+            background-color: ##fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-message {
+            color: #535353;
+            margin-bottom: 8px;
+        }
+
+        .chatbot-message {
+            color: #bdbdbd;
+            margin-bottom: 8px;
+        }
+    </style>
+
+<h1>Chatbot UI</h1>
+</head>
+<body>
+   <!-- <div class="menu">
+            <div class="menu-item" onclick="selectDomain('domain1')">Internal data</div>
+            <div class="menu-item" onclick="selectDomain('placeholder')">Policies</div>
+             Add more menu items as needed 
+    </div> -->
+
+    <div>
+        {% if query_history1 %}
+            <div class="query-history-container">
+                <p>Query History:</p>
+                <div class="query-history-scroll">
+                    <ul>
+                        {% for entry in query_history1 %}
+                            <li>
+                                <p class="user-message">User: {{ entry['user_input'] }}</p>
+                                <p class="chatbot-message">Chatbot: {{ entry['response'] }}</p>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        {% endif %}
+
+        <form action="/submit" method="post">
+          <!--  <label for="user_input">Enter a query:</label> -->
+            <input class ="e3_22" type="text" id="user_input" name="user_input">
+            <button class = "e3_23" type="submit">Submit</button>
+        </form>
+    </div>
+    <!-- <script>
+        function selectDomain(domain) {
+            // You can add logic here to handle the selected domain
+            console.log('Selected Domain:', domain);
+        }
+    </script> -->
+    
+    
+</body>
+</html>

@@ -8,6 +8,10 @@ from langchain.embeddings import HuggingFaceInstructEmbeddings
 from langchain.llms import HuggingFacePipeline
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler  # for streaming response
 from langchain.callbacks.manager import CallbackManager
+from langchain.vectorstores import FAISS
+from langchain.chains import ConversationChain
+from langchain.retrievers import BM25Retriever,EnsembleRetriever
+from ingest import load_documents
 
 callback_manager = CallbackManager([StreamingStdOutCallbackHandler()])
 
@@ -33,9 +37,14 @@ from constants import (
     MODEL_BASENAME,
     MAX_NEW_TOKENS,
     MODELS_PATH,
-    CHROMA_SETTINGS
+    CHROMA_SETTINGS,
+    SOURCE_DIRECTORY
 )
 
+
+def handle_greetings(query):
+    greetings = ["hi", "hello", "hey", "greetings", "morning", "afternoon", "evening"]
+    return any(greeting == query.lower() for greeting in greetings)
 
 def load_model(device_type, model_id, model_basename, LOGGING=logging):
     """
@@ -71,6 +80,7 @@ def load_model(device_type, model_id, model_basename, LOGGING=logging):
 
     # Load configuration from the model to avoid warnings
     generation_config = GenerationConfig.from_pretrained(model_id)
+    #https://huggingface.co/docs/transformers/main/main_classes/text_generation
     # see here for details:
     # https://huggingface.co/docs/transformers/
     # main_classes/text_generation#transformers.GenerationConfig.from_pretrained.returns
@@ -81,9 +91,10 @@ def load_model(device_type, model_id, model_basename, LOGGING=logging):
         model=model,
         tokenizer=tokenizer,
         max_length=MAX_NEW_TOKENS,
-        temperature=0.2,
-        # top_p=0.95,
-        repetition_penalty=1.15,
+        temperature=0.01,
+        top_p=0.95,
+        top_k=40,
+        repetition_penalty=1.03,
         generation_config=generation_config,
     )
 
@@ -121,40 +132,38 @@ def retrieval_qa_pipline(device_type, use_history, promptTemplate_type="llama"):
     # embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_NAME)
 
     # load the vectorstore
-    db = Chroma(
+    db2 = Chroma(
         persist_directory=PERSIST_DIRECTORY,
         embedding_function=embeddings,
         client_settings=CHROMA_SETTINGS
     )
-    retriever = db.as_retriever()
+    documents = load_documents(SOURCE_DIRECTORY)
+    texts = [doc.page_content for doc in documents]
+
+    new_db = FAISS.load_local("faiss_index", embeddings)
+    retriever = db2.as_retriever()
+    FAISS_retriever = new_db.as_retriever(search_type="similarity_score_threshold", search_kwargs={"score_threshold": .5})
+    bm25_retriever = BM25Retriever.from_texts(texts)
+    bm25_retriever.k = 2
+    ensemble_retriever = EnsembleRetriever(retrievers=[bm25_retriever, FAISS_retriever],
+                                       weights=[0.5, 0.5])
 
     # get the prompt template and memory if set by the user.
     prompt, memory = get_prompt_template(promptTemplate_type=promptTemplate_type, history=use_history)
 
+
     # load the llm pipeline
     llm = load_model(device_type, model_id=MODEL_ID, model_basename=MODEL_BASENAME, LOGGING=logging)
 
-    if use_history:
-        qa = RetrievalQA.from_chain_type(
-            llm=llm,
-            chain_type="stuff",  # try other chains types as well. refine, map_reduce, map_rerank
-            retriever=retriever,
-            return_source_documents=True,  # verbose=True,
-            callbacks=callback_manager,
-            chain_type_kwargs={"prompt": prompt, "memory": memory},
-        )
-    else:
-        qa = RetrievalQA.from_chain_type(
-            llm=llm,
-            chain_type="stuff",  # try other chains types as well. refine, map_reduce, map_rerank
-            retriever=retriever,
-            return_source_documents=True,  # verbose=True,
-            callbacks=callback_manager,
-            chain_type_kwargs={
-                "prompt": prompt,
-            },
-        )
-
+    qa = RetrievalQA.from_chain_type(
+        llm=llm,
+        chain_type="stuff",  # try other chains types as well. refine, map_reduce, map_rerank
+        retriever=ensemble_retriever,
+        return_source_documents=True,  # verbose=True,
+        callbacks=callback_manager,
+       chain_type_kwargs={"prompt": prompt, "memory": memory},
+       )
+    
     return qa
 
 
@@ -214,7 +223,7 @@ def retrieval_qa_pipline(device_type, use_history, promptTemplate_type="llama"):
     help="whether to save Q&A pairs to a CSV file (Default is False)",
 )
 
-def main(device_type, show_sources, use_history, model_type, save_qa):
+def main(device_type, show_sources, use_history, model_type, save_qa,query_history_empty = True):
     """
     Implements the main information retrieval task for a localGPT.
 
@@ -244,20 +253,39 @@ def main(device_type, show_sources, use_history, model_type, save_qa):
         os.mkdir(MODELS_PATH)
 
     qa = retrieval_qa_pipline(device_type, use_history, promptTemplate_type=model_type)
+    
     # Interactive questions and answers
     while True:
         query = input("\nEnter a query: ")
         if query == "exit":
             break
+
+        if handle_greetings(query):
+            print("Hello! I am AthenaHR, here to assist you with any queries you may have related to Human resources within the company.")
+            continue
         # Get the answer from the chain
-        res = qa(query)
+        chat_history = []
+        chat_history_text = []
+
+        if chat_history:
+
+            res = qa({"question": query, "chat_history": chat_history_text}) 
+        else:
+            # If chat history is empty, initialize it and make the first query
+            res = qa(query)
+
+        # Extract the result
         answer, docs = res["result"], res["source_documents"]
+        chat_history.append({"question": query, "answer": answer})
+        chat_history_text = chat_history[-4:]
 
         # Print the result
         print("\n\n> Question:")
         print(query)
         print("\n> Answer:")
         print(answer)
+
+
 
         if show_sources:  # this is a flag that you can set to disable showing answers.
             # # Print the relevant sources used for the answer

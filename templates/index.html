@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,7 +16,46 @@
             align-items: center; /* Center vertically */
             justify-content: center; /* Center horizontally */
             height: 100vh;
+            background-color: #94A1D2;
             
+        }
+
+        .query-history-container {
+            max-height: 450px; /* Set the maximum height for the container */
+            overflow-y: auto; /* Enable vertical scrolling */
+            background-color: 94A1D2#333; 
+            padding: 10px; /* Add padding for better visual appearance */
+        }
+
+        .query-history-scroll {
+            overflow-y: auto; /* Enable vertical scrolling within the container */
+        }
+        .e3_22 { 
+            background-color: #ffffff;
+            width: 525px;
+            height: 63px;
+            position: absolute;
+            left: 394px;
+            top: 592px;
+            border-top-left-radius: 30px;
+            border-top-right-radius: 30px;
+            border-bottom-left-radius: 30px;
+            border-bottom-right-radius: 30px;
+            text-align: center; /* Center the text horizontally */
+            display: flex;
+            align-items: center; /* Center the text vertically */
+        }
+        .e3_23 { 
+            background-color:rgba(43.1715240329504, 119.58303362131119, 209.2834523320198, 1);
+            width:325px;
+            height:63px;
+            position:absolute;
+            left: 504px;
+            top: 682px;
+            border-top-left-radius:30px;
+            border-top-right-radius:30px;
+            border-bottom-left-radius:30px;
+            border-bottom-right-radius:30px;
         }
 
         .container {
@@ -55,6 +95,7 @@
 
         h1 {
             color: #333;
+            margin-left: 540px;
         }
 
         form {
@@ -97,39 +138,50 @@
         }
 
         .user-message {
-            color: #535353;
+            color: black;
             margin-bottom: 8px;
         }
 
         .chatbot-message {
-            color: #bdbdbd;
+            color: #413434;
             margin-bottom: 8px;
         }
     </style>
 
-<h1>Chatbot UI</h1>
+<h1>AthenaGUARD</h1>
 </head>
 <body>
-    <div class="menu">
+    <div>
+        <a href="{{ url_for('faq') }}" target="_blank" >Go to FAQ</a>
+    </div>
+   <!-- <div class="menu">
             <div class="menu-item" onclick="selectDomain('domain1')">Internal data</div>
             <div class="menu-item" onclick="selectDomain('placeholder')">Policies</div>
-            <!-- Add more menu items as needed -->
-    </div>
+             Add more menu items as needed 
+    </div> -->
 
-    <div class="content">
-
-            {% if user_input %}
-                <div class="chat-container">
-                    <p class="user-message">User: {{ user_input }}</p>
-                    <p class="chatbot-message">Chatbot: {{ response }}</p>
+        <div>
+        {% if query_history %}
+            <div class="query-history-container">
+                <p>Query History:</p>
+                <div class="query-history-scroll">
+                    <ul>
+                        {% for entry in query_history %}
+                            <li>
+                                <p class="user-message">User: {{ entry['user_input'] }}</p>
+                                <p class="chatbot-message">Chatbot: {{ entry['response'] }}</p>
+                            </li>
+                        {% endfor %}
+                    </ul>
                 </div>
-            {% endif %}
+            </div>
+        {% endif %}
 
-            <form action="/submit" method="post">
-                <label for="user_input">Enter a query:</label>
-                <input type="text" id="user_input" name="user_input">
-                <button type="submit">Submit</button>
-            </form>
+        <form action="/submit" method="post">
+          <!--  <label for="user_input">Enter a query:</label> -->
+            <input class ="e3_22" type="text" id="user_input" name="user_input">
+            <button class = "e3_23" type="submit">Submit</button>
+        </form>
     </div>
     <!-- <script>
         function selectDomain(domain) {
